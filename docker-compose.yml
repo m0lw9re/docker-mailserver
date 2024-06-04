@@ -1,0 +1,117 @@
+version: "3.8"
+
+services:
+  mariadb:
+    image: mariadb:10.6
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: postfix
+      MYSQL_USER: postfix
+      MYSQL_PASSWORD: password
+    volumes:
+      - /home/m0lw9re/postfix/mysql:/var/lib/mysql
+    ports:
+      - "3306:3306"
+  postfix:
+    build: docker-mailserver-postfix
+    container_name: mailserver-postfix
+    environment:
+      - PF_DB_HOST=mariadb
+      - PF_DB_NAME=mail
+      - PF_DB_USER=postfix
+      - PF_DB_PASS=password
+      - PF_SETUP_PASS=root
+      - PF_MYDOMAIN=cntt.k35.com
+      - PF_MYHOSTNAME=cntt35
+      - PF_MYORIGIN=cntt.k35.com
+      - PF_TLS_CERT_FILE=/var/certificate/tls.crt
+      - PF_TLS_KEY_FILE=/var/certificate/tls.key
+      - PF_TLS_CAFILE=/var/certificate/tls.chain
+      - PF_TLS_CAPATH=/etc/ssl/certs
+      - PF_TLS_ADMIN_EMAIL=postmaster@cntt.k35.com
+    ports:
+      - "25:25"
+      - "110:110"
+      - "143:143"
+      - "587:587"
+      - "993:993"
+      - "995:995"
+      - "10025:10025"
+    volumes:
+      - /home/m0lw9re/postfix/mailboxes:/var/vmail
+      - /home/m0lw9re/postfix/spool:/var/spool/postfix
+      - /home/m0lw9re/postfix/certificate:/var/certificate
+      - /home/m0lw9re/postfix/log:/var/log
+    depends_on:
+      - mariadb
+  postfixadmin:
+    build: docker-mailserver-postfixadmin
+    container_name: mailserver-postfixadmin
+    environment:
+      - PFA_DB_HOST=mariadb
+      - PFA_DB_NAME=mail
+      - PFA_DB_USER=postfix
+      - PFA_DB_PASS=password
+      - PFA_SETUP_PASS=rootpassword
+      - PFA_POSTFIX_SERVER=postfix
+      - PFA_POSTFIX_PORT=25
+      - PFA_ABUSE_EMAIL=m0lw9re@gmail.com
+      - PFA_HOSTMASTER_EMAIL=m0lw9re@gmail.com
+      - PFA_POSTMASTER_EMAIL=m0lw9re@gmail.com
+      - PFA_WEBMASTER_EMAIL=m0lw9re@gmail.com
+    ports:
+      - "80:80"
+    volumes:
+      - /home/m0lw9re/postfix/adminlog:/var/log
+    depends_on:
+      - mariadb
+  roundcube:
+    build: docker-mailserver-roundcube
+    container_name: mailserver-roundcube
+    environment:
+      - RC_DB_HOST=mariadb
+      - RC_DB_NAME=roundcube
+      - RC_DB_USER=roundcube
+      - RC_DB_PASS=password
+      - RC_DES_KEY=9zbgz0q8028uqnrs9vmdnt4w
+      - RC_IMAP_SERVER_NAME=postfix
+      - RC_SMTP_SERVER_NAME=postfix
+      - RC_DEFAULT_DOMAIN=cntt.k35.com
+    ports:
+      - "8088:80"
+    volumes:
+      - /home/m0lw9re/postfix/clientlog:/var/log
+      - /home/m0lw9re/postfix/roundcubelog:/var/cpanel/roundcube/log/
+    depends_on:
+      - mariadb
+  amavis:
+    build: docker-mailserver-amavis
+    container_name: mailserver-amavis
+    environment:
+      - AV_MYDOMAIN=cntt35
+      - AV_POSTFIX_SERVICE_NAME=postfix
+      - AV_POSTFIX_SERVICE_PORT=10025
+      - AV_VIRUSADMIN_EMAIL=m0lw9re@gmail.com
+      - AV_NOTIFY_SENDER=postfixadmin@cntt.k35.com
+      - AV_NOTIFY_ADMIN=postfixadmin@cntt.k35.com
+    ports:
+      - "10024:10024"
+    volumes:
+      - /home/m0lw9re/postfix/virusmails:/var/virusmails
+    depends_on:
+      - postfix
+  opendkim:
+    build: docker-mailserver-opendkim
+    container_name: mailserver-opendkim
+    environment:
+      - DKIM_DOMAIN=cntt.k35.com
+      - DKIM_PORT=41001
+      - DKIM_DB_HOST=mariadb
+      - DKIM_DB_NAME=opendkim
+      - DKIM_DB_USER=opendkim
+      - DKIM_DB_PASS=password
+      - DKIM_SETUP_PASS=root
+    ports:
+      - "41001:41001"
+    depends_on:
+      - mariadb
