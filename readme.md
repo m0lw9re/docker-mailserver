@@ -7,7 +7,9 @@ create index domain on mail.domain (domain);
 ``` 
 
 ### Config for roundcube
+```
 CREATE DATABASE roundcube DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
-CREATE USER roundcube@172.25.0.4 IDENTIFIED BY 'password'; 
-GRANT ALL PRIVILEGES ON roundcube.* TO roundcube@172.25.0.4;
+CREATE USER roundcube@'%' IDENTIFIED BY 'password'; 
+GRANT ALL PRIVILEGES ON roundcube.* TO roundcube@'%';
 FLUSH PRIVILEGES;
+``` 
